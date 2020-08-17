@@ -1,7 +1,9 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.Character.Subset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,16 +24,23 @@ public class KruskalTSP_Algorithm {
 	/**
 	 * Main
 	 * @param args; filepath as string
+	 * @throws IOException 
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		
 		//default file path
-		String fileToRead = "distanceMatrix.txt";
+		String fileToRead = "inputMatrix.txt";
+		String outputFilePath = "results.txt";
 		
-		if (args.length != 0 && args != null)  {
+		if (args.length != 0 && args[0] != null)  {
 			fileToRead = args[0];
 			
+			
 		}
+		if (args.length != 0 &&  args[1] != null) {
+			 outputFilePath = args[1];
+		}
+		
 		//Reading input matrix
 		ArrayList<ArrayList<Double>> inputMatrix = new ArrayList<ArrayList<Double>>();
 		inputMatrix = readInputMatrix(fileToRead);
@@ -39,32 +48,35 @@ public class KruskalTSP_Algorithm {
 		
 		//Creating complete graph
 		ArrayList<Node> nodes = new ArrayList<Node>();
-		ArrayList<Edge> edgelist = new ArrayList<Edge>();
-		Pair<ArrayList<Node>,ArrayList<Edge>> completegraph = CreateCompleteGraph(inputMatrix);
-		nodes = completegraph.getValue1();
-		edgelist = completegraph.getValue2();
-		Collections.sort(edgelist);
+		ArrayList<Edge> edgeList = new ArrayList<Edge>();
+		Pair<ArrayList<Node>,ArrayList<Edge>> completeGraph = CreateCompleteGraph(inputMatrix);
+		nodes = completeGraph.getValue1();
+		edgeList = completeGraph.getValue2();
+		Collections.sort(edgeList);
 		
 		//Creating minimum spanning tree
-		ArrayList<Edge>resultMST = CreateKruskalMST(nodes,edgelist);
-		double resultlength = 0;
+		ArrayList<Edge>resultMST = CreateKruskalMST(nodes,edgeList);
+		double resultLength = 0;
+		
 		
 		//Printing results
 		System.out.println("Printing MST");
 		for (int i = 0; i < nodes.size()-1; i++) {
-			resultlength = resultlength + resultMST.get(i).getLength();
+			resultLength = resultLength + resultMST.get(i).getLength();
 			System.out.println("Nodes: "+resultMST.get(i).getStartPoint()+" ; "+ resultMST.get(i).getEndPoint());
 			System.out.println(resultMST.get(i).getLength());
 			
 		}
+		
+		writeOutputToFile(null, resultLength,fileToRead, outputFilePath, "KruskalMST");
 		System.out.println(resultMST);
-		System.out.println("Length: "+ resultlength);
+		System.out.println("Length: "+ resultLength);
 		System.out.println();
 		
 		
 		//########################################################################
 		//Creating open loop traveling salesman route
-		ArrayList<Edge>resultTSP = CreateKruskalTSP(nodes,edgelist);
+		ArrayList<Edge>resultTSP = CreateKruskalTSP(nodes,edgeList);
 		//ArrayList<Edge>resultTSP = CreateRandomizedKruskalTSP(graph);
 		double resultTSPlength = 0;
 		String resultTSProute = "";
@@ -78,22 +90,22 @@ public class KruskalTSP_Algorithm {
 			
 		}
 		//Finding leaf node from route
-		int leafnode = 0;
+		int leafNode = 0;
 		for (int j = 0; j < nodes.size(); j++) {
 			if (nodes.get(j).getTimesintsp() == 1) {
-				leafnode = j;
+				leafNode = j;
 			}
 		}
-		System.out.println("leaf node: "+leafnode);
+		System.out.println("leaf node: "+leafNode);
 		
 		//Constructing printable route from TSP edges
-		ArrayList<Integer> resultroute = new ArrayList<Integer>();
-		resultroute = constructRoute(resultTSP,leafnode);
-		
+		ArrayList<Integer> resultRoute = new ArrayList<Integer>();
+		resultRoute = constructRoute(resultTSP,leafNode);
+		writeOutputToFile(resultRoute, resultTSPlength,fileToRead, outputFilePath, "KruskalTSP");
 		//Printing results
 		System.out.println(resultTSP);
 		System.out.println(resultTSProute);
-		System.out.println("Result route: "+resultroute);
+		System.out.println("Result route: "+resultRoute);
 		System.out.println("TSP Length: "+ resultTSPlength);
 		System.out.println("");
 		
@@ -105,7 +117,7 @@ public class KruskalTSP_Algorithm {
 		//#######################################################################
 		//Creating randomized TSP route
 		int repeats = 100; //How many times we repeat making the randomized TSP route
-		int rleafnode = 0;
+		int rLeafNode = 0;
 		double bestRandomizedResultTSPlength = Double.MAX_VALUE;
 		//String bestRandomizedResultTSProute = "";
 		ArrayList<Edge>bestRandomizedResultTSP = new ArrayList<Edge>();
@@ -117,7 +129,7 @@ public class KruskalTSP_Algorithm {
 				nodes.get(j).resetTimesintsp();
 			}
 			
-			ArrayList<Edge>randomizedResultTSP = CreateRandomizedKruskalTSP(nodes,edgelist);
+			ArrayList<Edge>randomizedResultTSP = CreateRandomizedKruskalTSP(nodes,edgeList);
 			double randomizedResultTSPlength = 0;
 			//String randomizedResultTSProute = "";
 	
@@ -136,7 +148,7 @@ public class KruskalTSP_Algorithm {
 				//Finding leaf node from route
 				for (int j = 0; j < nodes.size(); j++) {
 					if (nodes.get(j).getTimesintsp() == 1) {
-						rleafnode = j;
+						rLeafNode = j;
 					}
 				}
 			}
@@ -144,12 +156,13 @@ public class KruskalTSP_Algorithm {
 			
 		}
 		
-		System.out.println("randomized leaf node: "+rleafnode);
+		System.out.println("randomized leaf node: "+rLeafNode);
 
 		//Constructing printable route from TSP edges
 		ArrayList<Integer> randomizedResultroute = new ArrayList<Integer>();
-		randomizedResultroute = constructRoute(bestRandomizedResultTSP,rleafnode);
+		randomizedResultroute = constructRoute(bestRandomizedResultTSP,rLeafNode);
 
+		writeOutputToFile(randomizedResultroute, bestRandomizedResultTSPlength,fileToRead, outputFilePath, "RandomizedKruskalTSP");
 		//Printing results
 		System.out.println(bestRandomizedResultTSP);
 		//System.out.println(randomizedResultTSProute);
@@ -187,6 +200,23 @@ public class KruskalTSP_Algorithm {
 		}
 		
 	}
+	/**
+	 * 
+	 * @param randomizedResultroute
+	 * @param bestRandomizedResultTSPlength
+	 * @throws IOException 
+	 */
+	public static void writeOutputToFile(ArrayList<Integer> route, double length, String inputFilePath, String outputFilePath, String algorithmType) throws IOException {
+		PrintWriter writer = new PrintWriter((new FileWriter(outputFilePath,true)));
+		writer.println(inputFilePath);
+		writer.println(algorithmType);
+		writer.println(route);
+		writer.println(length);
+		writer.println();
+		writer.close();
+		
+	}
+	
 	
 	/** Reads file that has input matrix
 	 * @param inputFilePath; location of the input file
@@ -223,22 +253,22 @@ public class KruskalTSP_Algorithm {
 	 * @param currentnode; leaf node of TSP route
 	 * @return route that has all nodes in route order
 	 */
-	private static ArrayList<Integer> constructRoute(ArrayList<Edge> resultTSP, int currentnode) {
+	private static ArrayList<Integer> constructRoute(ArrayList<Edge> resultTSP, int currentNode) {
 		ArrayList<Integer> route = new ArrayList<Integer>();
-		route.add(currentnode);
+		route.add(currentNode);
 		
 		while (route.size() < resultTSP.size()+1) {
 			
 			for(int i = 0; i < resultTSP.size(); i++) {
 				
-				if ((resultTSP.get(i).getStartPoint() == currentnode) && (route.contains(resultTSP.get(i).getEndPoint())==false)) {
-					currentnode = resultTSP.get(i).getEndPoint();
-					route.add(currentnode);		
+				if ((resultTSP.get(i).getStartPoint() == currentNode) && (route.contains(resultTSP.get(i).getEndPoint())==false)) {
+					currentNode = resultTSP.get(i).getEndPoint();
+					route.add(currentNode);		
 				}
 				
-				else if ((resultTSP.get(i).getEndPoint() == currentnode) && (route.contains(resultTSP.get(i).getStartPoint())==false)) {
-					currentnode = resultTSP.get(i).getStartPoint();
-					route.add(currentnode);
+				else if ((resultTSP.get(i).getEndPoint() == currentNode) && (route.contains(resultTSP.get(i).getStartPoint())==false)) {
+					currentNode = resultTSP.get(i).getStartPoint();
+					route.add(currentNode);
 					
 				}	
 			}	
@@ -254,59 +284,60 @@ public class KruskalTSP_Algorithm {
 	private static Pair<ArrayList<Node>, ArrayList<Edge>> CreateCompleteGraph(ArrayList<ArrayList<Double>> inputMatrix) {
 		
 		//edgelist.clear();
-		ArrayList<Edge> edgelist = new ArrayList<Edge>();
+		ArrayList<Edge> edgeList = new ArrayList<Edge>();
 		ArrayList<Node> graph = new ArrayList<Node>();
 		ArrayList<String> uniqueEdges = new ArrayList<String>();
 		for (int i = 0; i < inputMatrix.size(); i++ ) {
-			Node nodenew = new Node();
-			nodenew.setNumber(i);
+			Node nodeNew = new Node();
+			nodeNew.setNumber(i);
 			//nodenew.edges = null;
-			System.out.println(nodenew.number);
+			System.out.println(nodeNew.number);
 			ArrayList<Double> distances = inputMatrix.get(i);
 			for (int j = 0; j < distances.size(); j++) {
-				Edge edgenew = new Edge();
-				edgenew.setStartPoint(i);
-				edgenew.setEndPoint(j);
-				edgenew.setLength(distances.get(j));
+				Edge edgeNew = new Edge();
+				edgeNew.setStartPoint(i);
+				edgeNew.setEndPoint(j);
+				edgeNew.setLength(distances.get(j));
 				if (i != j) {
-					nodenew.addEdge(edgenew);
+					nodeNew.addEdge(edgeNew);
 				}
-				if (!uniqueEdges.contains(edgenew.getStartPoint()+";"+edgenew.getEndPoint()) && !uniqueEdges.contains(edgenew.getEndPoint()+";"+ edgenew.getStartPoint()) && i != j) {					
-					edgelist.add(edgenew);
-					uniqueEdges.add(edgenew.getStartPoint()+";"+edgenew.getEndPoint());
-					uniqueEdges.add(edgenew.getEndPoint()+";"+edgenew.getStartPoint());
+				if (!uniqueEdges.contains(edgeNew.getStartPoint()+";"+edgeNew.getEndPoint()) && !uniqueEdges.contains(edgeNew.getEndPoint()+";"+ edgeNew.getStartPoint()) && i != j) {					
+					edgeList.add(edgeNew);
+					uniqueEdges.add(edgeNew.getStartPoint()+";"+edgeNew.getEndPoint());
+					uniqueEdges.add(edgeNew.getEndPoint()+";"+edgeNew.getStartPoint());
 				}
 			}
 		
-			graph.add(nodenew);
+			graph.add(nodeNew);
 			
 		}
 		
-		Pair <ArrayList<Node>, ArrayList<Edge>> values = new Pair1 <ArrayList<Node>, ArrayList<Edge>>(graph, edgelist);
+		Pair <ArrayList<Node>, ArrayList<Edge>> values = new Pair1 <ArrayList<Node>, ArrayList<Edge>>(graph, edgeList);
 		return values; 
 		
 	}
 	
 	/**
 	 * Creates minimum spanning tree using Kruskal's algorithm
-	 * @param nodelist; 
+	 * @param nodeList; list of all nodes in complete graph
+	 * @param edgeList; edges of the complete graph in sorted order from shortest to longest
 	 * @return resulting MST as arraylist of edges
 	 */
-	private static ArrayList<Edge> CreateKruskalMST(ArrayList<Node> nodelist, ArrayList<Edge> edgelist) {
+	private static ArrayList<Edge> CreateKruskalMST(ArrayList<Node> nodeList, ArrayList<Edge> edgeList) {
 		
 		ArrayList<Edge> result = new ArrayList<Edge>();
-		System.out.println("edgelist: "+edgelist);
+		System.out.println("edgelist: "+edgeList);
 		
-		System.out.println("sorted edgelist: "+edgelist);
-		System.out.println("edgelist size: "+edgelist.size());
+		System.out.println("sorted edgelist: "+edgeList);
+		System.out.println("edgelist size: "+edgeList.size());
 		
 		//Create own set for each node and add them to list
 		ArrayList<HashSet<Integer>> sets = new ArrayList<HashSet<Integer>>();
-		System.out.println("Nodelist size: "+nodelist.size());
-		int allnodessize = nodelist.size();
-		for (int i = 0; i < allnodessize; i++) {
+		System.out.println("Nodelist size: "+nodeList.size());
+		int allNodesSize = nodeList.size();
+		for (int i = 0; i < allNodesSize; i++) {
 			HashSet<Integer> hash = new HashSet<Integer>();
-			hash.add(nodelist.get(i).getNumber());
+			hash.add(nodeList.get(i).getNumber());
 			sets.add(hash);
 			
 		}
@@ -314,27 +345,27 @@ public class KruskalTSP_Algorithm {
 		//While there is not enough edges in result loop through sorted edgelist
 		int index = 0;
 		//int sizeofedgelist = edgelist.size();
-		while (result.size() < (nodelist.size()-1)){
+		while (result.size() < (nodeList.size()-1)){
 
 			System.out.println("current subsets");
 			System.out.println(sets);
 
-			Edge testedge = edgelist.get(index);
-			int startpoint = testedge.getStartPoint();
-			int endpoint = testedge.getEndPoint();
+			Edge testEdge = edgeList.get(index);
+			int startPoint = testEdge.getStartPoint();
+			int endPoint = testEdge.getEndPoint();
 			//System.out.println();
 			//System.out.println("edgenodes: "+ startpoint + " ; "+endpoint);
 
-			boolean foundinsameset = false;
+			boolean foundInSameSet = false;
 			//Check if there is set where start and end are in same set
 			for (int i = 0; i < sets.size(); i++) {
-				if(sets.get(i).contains(startpoint) && sets.get(i).contains(endpoint)) {
-					foundinsameset = true;
+				if(sets.get(i).contains(startPoint) && sets.get(i).contains(endPoint)) {
+					foundInSameSet = true;
 				}
 			}
 
 			//If nodes from tested edge are in same set, skip
-			if(foundinsameset == true) {
+			if(foundInSameSet == true) {
 				index++;
 				System.out.println("edge skipped");
 			}
@@ -344,22 +375,22 @@ public class KruskalTSP_Algorithm {
 
 				//Find proper indexes
 				System.out.println("edge chosen");
-				int indextoadd = 0;
+				int indexToAdd = 0;
 				for(int i = 0; i < sets.size(); i++) {
-					if (sets.get(i).contains(startpoint)) {
-						indextoadd = i;
+					if (sets.get(i).contains(startPoint)) {
+						indexToAdd = i;
 					}
 				}
-				int indexfrom = 0;
+				int indexFrom = 0;
 				for (int j = 0; j < sets.size(); j++) {
-					if (sets.get(j).contains(endpoint)){
-						indexfrom = j;
+					if (sets.get(j).contains(endPoint)){
+						indexFrom = j;
 					}
 				}
-				sets.get(indextoadd).addAll(sets.get(indexfrom));
-				sets.remove(indexfrom);
+				sets.get(indexToAdd).addAll(sets.get(indexFrom));
+				sets.remove(indexFrom);
 				//sets.get(endpoint).add(endpoint);
-				result.add(testedge);
+				result.add(testEdge);
 				index++;
 				//edgelist.remove(index);
 				//sizeofedgelist--;
@@ -373,25 +404,26 @@ public class KruskalTSP_Algorithm {
 	
 	/**
 	 * Creates TSP route using modified Kruskal's algorithm
-	 * @param nodelist
+	 * @param nodeList; list of all nodes in complete graph
+	 * @param edgeList; edges of the complete graph in sorted order from shortest to longest
 	 * @return resulting arraylist of edges that contains TSP route 
 	 */
-	private static ArrayList<Edge> CreateKruskalTSP(ArrayList<Node> nodelist, ArrayList<Edge> edgelist) {
+	private static ArrayList<Edge> CreateKruskalTSP(ArrayList<Node> nodeList, ArrayList<Edge> edgeList) {
 		ArrayList<Edge> result = new ArrayList<Edge>();
-		System.out.println("edgelist: "+edgelist);
+		System.out.println("edgelist: "+edgeList);
 		
 		//Collections.sort(edgelist);
 		
-		System.out.println("sorted edgelist: "+edgelist);
-		System.out.println("edgelist size: "+edgelist.size());
+		System.out.println("sorted edgelist: "+edgeList);
+		System.out.println("edgelist size: "+edgeList.size());
 		
 		//Create own set for each node and add them to list
 		ArrayList<HashSet<Integer>> sets = new ArrayList<HashSet<Integer>>();
-		System.out.println("Nodelist size: "+nodelist.size());
-		int allnodessize = nodelist.size();
-		for (int i = 0; i < allnodessize; i++) {
+		System.out.println("Nodelist size: "+nodeList.size());
+		int allNodesSize = nodeList.size();
+		for (int i = 0; i < allNodesSize; i++) {
 			HashSet<Integer> hash = new HashSet<Integer>();
-			hash.add(nodelist.get(i).getNumber());
+			hash.add(nodeList.get(i).getNumber());
 			sets.add(hash);
 			
 		}
@@ -400,38 +432,38 @@ public class KruskalTSP_Algorithm {
 		//While there is not enough edges in result continue loop
 		int index = 0;
 		//int sizeofedgelist = edgelist.size();
-		while (result.size() < (nodelist.size()-1)){
+		while (result.size() < (nodeList.size()-1)){
 
 			System.out.println("current subsets");
 			System.out.println(sets);
 
 			//Choose shortest edge to test
-			Edge testedge = edgelist.get(index);
-			int startpoint = testedge.getStartPoint();
-			int endpoint = testedge.getEndPoint();
+			Edge testEdge = edgeList.get(index);
+			int startPoint = testEdge.getStartPoint();
+			int endPoint = testEdge.getEndPoint();
 			//System.out.println();
-			System.out.println("edgenodes: "+ startpoint + " ; "+endpoint);
+			System.out.println("edgenodes: "+ startPoint + " ; "+endPoint);
 
-			boolean foundinsameset = false;
+			boolean foundInSameSet = false;
 			//Check if there is set where start and end are in same set
 			for (int i = 0; i < sets.size(); i++) {
-				if(sets.get(i).contains(startpoint) && sets.get(i).contains(endpoint)) {
-					foundinsameset = true;
+				if(sets.get(i).contains(startPoint) && sets.get(i).contains(endPoint)) {
+					foundInSameSet = true;
 
 				}
 			}
 			//Check if edge causes branching
 			boolean branching = false;
-			if (nodelist.get(startpoint).getTimesintsp() >= 2) {
+			if (nodeList.get(startPoint).getTimesintsp() >= 2) {
 				branching = true;
 			}
-			if (nodelist.get(endpoint).getTimesintsp() >= 2) {
+			if (nodeList.get(endPoint).getTimesintsp() >= 2) {
 				branching = true;
 			}
 
 
 			//If nodes from tested edge are in same set or edge would cause branching, skip
-			if(foundinsameset == true || branching == true) {
+			if(foundInSameSet == true || branching == true) {
 				index++;
 				System.out.println("edge skipped");
 			}
@@ -442,24 +474,24 @@ public class KruskalTSP_Algorithm {
 
 				//Find proper indexes
 				System.out.println("edge chosen");
-				int indextoadd = 0;
+				int indexToAdd = 0;
 				for(int i = 0; i < sets.size(); i++) {
-					if (sets.get(i).contains(startpoint)) {
-						indextoadd = i;
+					if (sets.get(i).contains(startPoint)) {
+						indexToAdd = i;
 					}
 				}
-				int indexfrom = 0;
+				int indexFrom = 0;
 				for (int j = 0; j < sets.size(); j++) {
-					if (sets.get(j).contains(endpoint)){
-						indexfrom = j;
+					if (sets.get(j).contains(endPoint)){
+						indexFrom = j;
 					}
 				}
-				sets.get(indextoadd).addAll(sets.get(indexfrom));
-				sets.remove(indexfrom);
-				result.add(testedge);
+				sets.get(indexToAdd).addAll(sets.get(indexFrom));
+				sets.remove(indexFrom);
+				result.add(testEdge);
 
-				nodelist.get(startpoint).setTimesintsp();
-				nodelist.get(endpoint).setTimesintsp();		
+				nodeList.get(startPoint).setTimesintsp();
+				nodeList.get(endPoint).setTimesintsp();		
 				index++;
 			
 			}
@@ -470,10 +502,11 @@ public class KruskalTSP_Algorithm {
 	
 	/**
 	 * Creates TSP route using modified Kruskal's algorithm and randomization
-	 * @param nodelist
+	 * @param nodeList; list of all nodes in complete graph
+	 * @param edgeList; edges of the complete graph in sorted order from shortest to longest
 	 * @return resulting arraylist of edges that contains TSP route 
 	 */
-	private static ArrayList<Edge> CreateRandomizedKruskalTSP(ArrayList<Node> nodelist, ArrayList<Edge> edgelist) {
+	private static ArrayList<Edge> CreateRandomizedKruskalTSP(ArrayList<Node> nodeList, ArrayList<Edge> edgeList) {
 		ArrayList<Edge> result = new ArrayList<Edge>();
 		//System.out.println("edgelist: "+edgelist);
 		//System.out.println("sorted edgelist: "+edgelist);
@@ -482,19 +515,20 @@ public class KruskalTSP_Algorithm {
 		//Create own set for each node and add them to list
 		ArrayList<HashSet<Integer>> sets = new ArrayList<HashSet<Integer>>();
 		//System.out.println("Nodelist size: "+nodelist.size());
-		int allnodessize = nodelist.size();
-		for (int i = 0; i < allnodessize; i++) {
+		int allNodesSize = nodeList.size();
+		for (int i = 0; i < allNodesSize; i++) {
 			HashSet<Integer> hash = new HashSet<Integer>();
-			hash.add(nodelist.get(i).getNumber());
+			hash.add(nodeList.get(i).getNumber());
 			sets.add(hash);
 			
 		}
 		
-		ArrayList<Integer> availableEdges = new ArrayList<Integer>(Collections.nCopies(edgelist.size(), 0));
+		ArrayList<Integer> availableEdges = new ArrayList<Integer>(Collections.nCopies(edgeList.size(), 0));
 		//While there is not enough edges in result continue loop
 		int index = 0;
+		int randomizationNumber = 5;
 		//int sizeofedgelist = edgelist.size();
-		while (result.size() < (nodelist.size()-1)){
+		while (result.size() < (nodeList.size()-1)){
 
 			//System.out.println("current subsets");
 			//System.out.println(sets);
@@ -505,58 +539,58 @@ public class KruskalTSP_Algorithm {
 			//System.out.println(" edgelist size: "+sizeofedgelist);
 			
 			//Choose 5 shortest available edges and add their indexes to an arraylist
-			ArrayList<Integer> chosenindexes = new ArrayList<Integer>();
-			int testindex = 0;
-			while (chosenindexes.size() < 5) {
-				if (availableEdges.get(testindex) == 0) {
-					chosenindexes.add(testindex);
+			ArrayList<Integer> chosenIndexes = new ArrayList<Integer>();
+			int testIndex = 0;
+			while (chosenIndexes.size() < randomizationNumber && testIndex < availableEdges.size()) {
+				if (availableEdges.get(testIndex) == 0) {
+					chosenIndexes.add(testIndex);
 				}
-				testindex++;
+				testIndex++;
 			}
 			//Choose randomly one of them
 			int indexToTest = 0;
 			Random rand = new Random();
-			int randomnumber = rand.nextInt(5); 
+			int randomNumber = rand.nextInt(chosenIndexes.size()); 
 			
 			//If picking last edge to TSP route choose shortest one, because it is always the best pick
-			if (result.size() == nodelist.size()-2) {
-				indexToTest = chosenindexes.get(0);
+			if (result.size() == nodeList.size()-2) {
+				indexToTest = chosenIndexes.get(0);
 			}
 			else {
-				indexToTest = chosenindexes.get(randomnumber);
+				indexToTest = chosenIndexes.get(randomNumber);
 			}
 			
-			Edge testedge = edgelist.get(indexToTest);
+			Edge testEdge = edgeList.get(indexToTest);
 			
-			int startpoint = testedge.getStartPoint();
-			int endpoint = testedge.getEndPoint();
+			int startPoint = testEdge.getStartPoint();
+			int endPoint = testEdge.getEndPoint();
 			//System.out.println();
 			//System.out.println("edgenodes: "+ startpoint + " ; "+endpoint);
 
 			//System.out.println("sets");
 			//System.out.println(sets.get(startpoint));
 			//System.out.println(sets.get(endpoint));
-			boolean foundinsameset = false;
+			boolean foundInSameSet = false;
 			
 			//Check if there is set where start and end are in same set
 			for (int i = 0; i < sets.size(); i++) {
-				if(sets.get(i).contains(startpoint) && sets.get(i).contains(endpoint)) {
-					foundinsameset = true;
+				if(sets.get(i).contains(startPoint) && sets.get(i).contains(endPoint)) {
+					foundInSameSet = true;
 
 				}
 			}
 			//Check if edge causes branching
 			boolean branching = false;
-			if (nodelist.get(startpoint).getTimesintsp() >= 2) {
+			if (nodeList.get(startPoint).getTimesintsp() >= 2) {
 				branching = true;
 			}
-			if (nodelist.get(endpoint).getTimesintsp() >= 2) {
+			if (nodeList.get(endPoint).getTimesintsp() >= 2) {
 				branching = true;
 			}
 
 
 			//If nodes from tested edge are in same set or edge would cause branching, skip
-			if(foundinsameset == true || branching == true) {
+			if(foundInSameSet == true || branching == true) {
 				index++;
 				availableEdges.set(indexToTest, 1);
 				//System.out.println("edge skipped");
@@ -571,26 +605,26 @@ public class KruskalTSP_Algorithm {
 				availableEdges.set(indexToTest, 1);
 				int indextoadd = 0;
 				for(int i = 0; i < sets.size(); i++) {
-					if (sets.get(i).contains(startpoint)) {
+					if (sets.get(i).contains(startPoint)) {
 						indextoadd = i;
 					}
 				}
 				int indexfrom = 0;
 				for (int j = 0; j < sets.size(); j++) {
-					if (sets.get(j).contains(endpoint)){
+					if (sets.get(j).contains(endPoint)){
 						indexfrom = j;
 					}
 				}
 				sets.get(indextoadd).addAll(sets.get(indexfrom));
 				sets.remove(indexfrom);
 				//sets.get(endpoint).add(endpoint);
-				result.add(testedge);
+				result.add(testEdge);
 				//edgelist.remove(index);
 				//sizeofedgelist--;
 
 
-				nodelist.get(startpoint).setTimesintsp();
-				nodelist.get(endpoint).setTimesintsp();		
+				nodeList.get(startPoint).setTimesintsp();
+				nodeList.get(endPoint).setTimesintsp();		
 				index++;
 			
 			}
